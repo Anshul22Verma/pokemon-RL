@@ -1,39 +1,97 @@
 import gymnasium as gym
-import numpy as np
+from gymnasium import spaces
+
 import socket
+import numpy as np
 import cv2
+
+
+ACTIONS = [
+    "NONE",
+    "A",
+    "B",
+    "UP",
+    "DOWN",
+    "LEFT",
+    "RIGHT"
+]
+
 
 class EmeraldEnv(gym.Env):
 
     def __init__(self):
+
         super().__init__()
 
-        self.action_space = gym.spaces.Discrete(6)
+        self.sock = socket.socket(
+            socket.AF_INET,
+            socket.SOCK_STREAM
+        )
 
-        self.observation_space = gym.spaces.Box(
+        print("Connecting to BizHawk...")
+
+        self.sock.connect(("127.0.0.1", 9999))
+
+        print("Connected!")
+
+        self.action_space = spaces.Discrete(
+            len(ACTIONS)
+        )
+
+        self.observation_space = spaces.Box(
             low=0,
             high=255,
-            shape=(240, 160, 3),
+            shape=(160, 240, 3),
             dtype=np.uint8
         )
 
-        self.sock = socket.socket()
-        self.sock.connect(("127.0.0.1", 9999))
+    def _get_frame(self):
 
-    def _get_obs(self):
-        data = self.sock.recv(240*160*3)
-        frame = np.frombuffer(data, dtype=np.uint8)
-        return frame.reshape((240,160,3))
+        data = b""
+
+        while len(data) < 160 * 240 * 3:
+            packet = self.sock.recv(4096)
+            data += packet
+
+        frame = np.frombuffer(
+            data[:160*240*3],
+            dtype=np.uint8
+        )
+
+        frame = frame.reshape(
+            (160, 240, 3)
+        )
+
+        return frame
+
+    def reset(self, seed=None, options=None):
+
+        obs = self._get_frame()
+
+        return obs, {}
 
     def step(self, action):
-        self.sock.send(bytes([action]))
 
-        obs = self._get_obs()
+        command = ACTIONS[action]
 
-        reward = 0.0
-        done = False
+        self.sock.send(
+            command.encode()
+        )
 
-        return obs, reward, done, False, {}
+        obs = self._get_frame()
 
-    def reset(self):
-        return self._get_obs(), {}
+        reward = 0.01
+
+        terminated = False
+
+        truncated = False
+
+        info = {}
+
+        return (
+            obs,
+            reward,
+            terminated,
+            truncated,
+            info
+        )
