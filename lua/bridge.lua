@@ -1,5 +1,5 @@
 local input_file = "input.txt"
-local output_file = "frame.raw"
+local frame_file = "frame.raw"
 
 while true do
 
@@ -14,14 +14,13 @@ while true do
 
     action = string.gsub(action, "%s+", "")
 
-    -- Reset inputs
+    -- Reset input
     joypad.set({
         A=false, B=false,
         Up=false, Down=false,
         Left=false, Right=false
     })
 
-    -- Apply action
     if action == "A" then joypad.set({A=true})
     elseif action == "B" then joypad.set({B=true})
     elseif action == "UP" then joypad.set({Up=true})
@@ -30,13 +29,14 @@ while true do
     elseif action == "RIGHT" then joypad.set({Right=true})
     end
 
-    -- Advance frame
     emu.frameadvance()
 
-    -- Save screenshot every frame
-    local img = gui.gdscreenshot()
+    -- ⭐ THIS is the correct screenshot API in BizHawk
+    local img = client.get_screen_buffer()
 
-    local f = io.open(output_file, "wb")
-    f:write(img)
-    f:close()
+    local f = io.open(frame_file, "wb")
+    if f then
+        f:write(img)
+        f:close()
+    end
 end
