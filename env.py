@@ -3,10 +3,13 @@ from gymnasium import spaces
 import numpy as np
 import cv2
 import os
+import time
 
-ACTIONS = ["NONE","A","B","UP","DOWN","LEFT","RIGHT"]
 
-class Env(gym.Env):
+ACTIONS = ["NONE", "A", "B", "UP", "DOWN", "LEFT", "RIGHT"]
+
+
+class EmeraldEnv(gym.Env):
 
     def __init__(self):
         super().__init__()
@@ -14,26 +17,45 @@ class Env(gym.Env):
         self.action_space = spaces.Discrete(len(ACTIONS))
 
         self.observation_space = spaces.Box(
-            0, 255, shape=(144,160,3), dtype=np.uint8
+            low=0,
+            high=255,
+            shape=(144, 160, 3),
+            dtype=np.uint8
         )
 
         self.input_file = "input.txt"
-        self.img_file = "frame.png"
+        self.frame_file = "frame.png"
 
-    def _write_action(self, a):
+        self.last_obs = np.zeros((144, 160, 3), dtype=np.uint8)
+
+    def _write_action(self, action):
         with open(self.input_file, "w") as f:
-            f.write(ACTIONS[a])
+            f.write(ACTIONS[action])
 
     def _read_frame(self):
-        img = cv2.imread(self.img_file)
+
+        # wait until BizHawk writes frame
+        timeout = 2.0
+        start = time.time()
+
+        while not os.path.exists(self.frame_file):
+            if time.time() - start > timeout:
+                return self.last_obs
+            time.sleep(0.01)
+
+        img = cv2.imread(self.frame_file)
 
         if img is None:
-            return np.zeros((144,160,3), dtype=np.uint8)
+            return self.last_obs
 
-        return cv2.resize(img, (160,144))
+        img = cv2.resize(img, (160, 144))
 
-    def reset(self):
-        return self._read_frame(), {}
+        self.last_obs = img
+        return img
+
+    def reset(self, seed=None, options=None):
+        obs = self._read_frame()
+        return obs, {}
 
     def step(self, action):
 
@@ -41,6 +63,15 @@ class Env(gym.Env):
 
         obs = self._read_frame()
 
+        # minimal reward (placeholder)
         reward = 0.01
 
-        return obs, reward, False, False, {}
+        terminated = False
+        truncated = False
+
+        info = {}
+
+        return obs, reward, terminated, truncated, info
+
+    def close(self):
+        pass
