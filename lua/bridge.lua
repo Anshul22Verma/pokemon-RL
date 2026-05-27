@@ -1,9 +1,9 @@
 local input_file = "input.txt"
-local frame_file = "frame.raw"
+local img_file = "frame.png"
 
 while true do
 
-    -- Read action from Python
+    -- read action
     local file = io.open(input_file, "r")
     local action = "NONE"
 
@@ -14,12 +14,7 @@ while true do
 
     action = string.gsub(action, "%s+", "")
 
-    -- Reset input
-    joypad.set({
-        A=false, B=false,
-        Up=false, Down=false,
-        Left=false, Right=false
-    })
+    joypad.set({})
 
     if action == "A" then joypad.set({A=true})
     elseif action == "B" then joypad.set({B=true})
@@ -31,12 +26,6 @@ while true do
 
     emu.frameadvance()
 
-    -- ⭐ THIS is the correct screenshot API in BizHawk
-    local img = client.get_screen_buffer()
-
-    local f = io.open(frame_file, "wb")
-    if f then
-        f:write(img)
-        f:close()
-    end
+    -- THIS ALWAYS WORKS
+    client.screenshot(img_file)
 end

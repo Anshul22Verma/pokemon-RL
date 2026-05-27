@@ -2,13 +2,11 @@ import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
 import cv2
-import time
 import os
 
-ACTIONS = ["NONE", "A", "B", "UP", "DOWN", "LEFT", "RIGHT"]
+ACTIONS = ["NONE","A","B","UP","DOWN","LEFT","RIGHT"]
 
-
-class EmeraldEnv(gym.Env):
+class Env(gym.Env):
 
     def __init__(self):
         super().__init__()
@@ -16,43 +14,32 @@ class EmeraldEnv(gym.Env):
         self.action_space = spaces.Discrete(len(ACTIONS))
 
         self.observation_space = spaces.Box(
-            low=0,
-            high=255,
-            shape=(144, 160, 3),
-            dtype=np.uint8
+            0, 255, shape=(144,160,3), dtype=np.uint8
         )
 
-        self.frame_file = "frame.raw"
         self.input_file = "input.txt"
+        self.img_file = "frame.png"
 
-    def _write_action(self, action):
+    def _write_action(self, a):
         with open(self.input_file, "w") as f:
-            f.write(ACTIONS[action])
+            f.write(ACTIONS[a])
 
-    def _get_frame(self):
-        while not os.path.exists(self.frame_file):
-            time.sleep(0.01)
+    def _read_frame(self):
+        img = cv2.imread(self.img_file)
 
-        data = np.fromfile(self.frame_file, dtype=np.uint8)
+        if img is None:
+            return np.zeros((144,160,3), dtype=np.uint8)
 
-        # BizHawk screenshot is raw PNG-like bytes, so decode via OpenCV
-        frame = cv2.imdecode(data, cv2.IMREAD_COLOR)
+        return cv2.resize(img, (160,144))
 
-        if frame is None:
-            return np.zeros((144, 160, 3), dtype=np.uint8)
-
-        frame = cv2.resize(frame, (160, 144))
-
-        return frame
-
-    def reset(self, seed=None, options=None):
-        return self._get_frame(), {}
+    def reset(self):
+        return self._read_frame(), {}
 
     def step(self, action):
 
         self._write_action(action)
 
-        obs = self._get_frame()
+        obs = self._read_frame()
 
         reward = 0.01
 
