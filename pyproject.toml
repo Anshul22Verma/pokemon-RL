@@ -5,20 +5,19 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "pokemon-rl"
 version = "0.1.0"
-description = "Pokemon reinforcement learning experiments"
+description = "Reinforcement learning agents for Pokémon Emerald using BizHawk"
 readme = "README.md"
-requires-python = ">=3.11,<3.12"
+requires-python = ">=3.11,<3.13"
 
 dependencies = [
-    "mgba",
     "gymnasium",
     "stable-baselines3",
-    "opencv-python",
     "numpy",
+    "opencv-python",
     "torch",
     "wandb",
     "supersuit"
 ]
 
 [tool.setuptools]
-packages = ["envs"]
+packages = ["env"]
