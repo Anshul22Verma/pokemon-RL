@@ -1,31 +1,37 @@
 local input_file = "input.txt"
-local img_file = "frame.png"
+local frame_file = "frame.png"
 
 while true do
 
-    -- read action
-    local file = io.open(input_file, "r")
+    -- default no input
     local action = "NONE"
 
+    local file = io.open(input_file, "r")
     if file then
-        action = file:read("*all")
+        action = file:read("*l")  -- IMPORTANT: read line only
         file:close()
     end
 
-    action = string.gsub(action, "%s+", "")
+    -- reset inputs every frame
+    local buttons = {
+        A=false, B=false,
+        Up=false, Down=false,
+        Left=false, Right=false
+    }
 
-    joypad.set({})
-
-    if action == "A" then joypad.set({A=true})
-    elseif action == "B" then joypad.set({B=true})
-    elseif action == "UP" then joypad.set({Up=true})
-    elseif action == "DOWN" then joypad.set({Down=true})
-    elseif action == "LEFT" then joypad.set({Left=true})
-    elseif action == "RIGHT" then joypad.set({Right=true})
+    if action == "A" then buttons.A = true
+    elseif action == "B" then buttons.B = true
+    elseif action == "UP" then buttons.Up = true
+    elseif action == "DOWN" then buttons.Down = true
+    elseif action == "LEFT" then buttons.Left = true
+    elseif action == "RIGHT" then buttons.Right = true
     end
 
+    joypad.set(buttons)
+
+    -- IMPORTANT: advance frame AFTER input set
     emu.frameadvance()
 
-    -- THIS ALWAYS WORKS
-    client.screenshot(img_file)
+    -- screenshot AFTER frame update
+    client.screenshot(frame_file)
 end
