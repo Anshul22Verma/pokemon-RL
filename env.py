@@ -1,97 +1,59 @@
 import gymnasium as gym
 from gymnasium import spaces
-
-import socket
 import numpy as np
 import cv2
+import time
+import os
 
-
-ACTIONS = [
-    "NONE",
-    "A",
-    "B",
-    "UP",
-    "DOWN",
-    "LEFT",
-    "RIGHT"
-]
+ACTIONS = ["NONE", "A", "B", "UP", "DOWN", "LEFT", "RIGHT"]
 
 
 class EmeraldEnv(gym.Env):
 
     def __init__(self):
-
         super().__init__()
 
-        self.sock = socket.socket(
-            socket.AF_INET,
-            socket.SOCK_STREAM
-        )
-
-        print("Connecting to BizHawk...")
-
-        self.sock.connect(("127.0.0.1", 9999))
-
-        print("Connected!")
-
-        self.action_space = spaces.Discrete(
-            len(ACTIONS)
-        )
+        self.action_space = spaces.Discrete(len(ACTIONS))
 
         self.observation_space = spaces.Box(
             low=0,
             high=255,
-            shape=(160, 240, 3),
+            shape=(144, 160, 3),
             dtype=np.uint8
         )
+
+        self.frame_file = "frame.raw"
+        self.input_file = "input.txt"
+
+    def _write_action(self, action):
+        with open(self.input_file, "w") as f:
+            f.write(ACTIONS[action])
 
     def _get_frame(self):
+        while not os.path.exists(self.frame_file):
+            time.sleep(0.01)
 
-        data = b""
+        data = np.fromfile(self.frame_file, dtype=np.uint8)
 
-        while len(data) < 160 * 240 * 3:
-            packet = self.sock.recv(4096)
-            data += packet
+        # BizHawk screenshot is raw PNG-like bytes, so decode via OpenCV
+        frame = cv2.imdecode(data, cv2.IMREAD_COLOR)
 
-        frame = np.frombuffer(
-            data[:160*240*3],
-            dtype=np.uint8
-        )
+        if frame is None:
+            return np.zeros((144, 160, 3), dtype=np.uint8)
 
-        frame = frame.reshape(
-            (160, 240, 3)
-        )
+        frame = cv2.resize(frame, (160, 144))
 
         return frame
 
     def reset(self, seed=None, options=None):
-
-        obs = self._get_frame()
-
-        return obs, {}
+        return self._get_frame(), {}
 
     def step(self, action):
 
-        command = ACTIONS[action]
-
-        self.sock.send(
-            command.encode()
-        )
+        self._write_action(action)
 
         obs = self._get_frame()
 
         reward = 0.01
 
-        terminated = False
-
-        truncated = False
-
-        info = {}
-
-        return (
-            obs,
-            reward,
-            terminated,
-            truncated,
-            info
-        )
+        return obs, reward, False, False, {}

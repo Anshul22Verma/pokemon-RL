@@ -1,59 +1,42 @@
-local socket = require("socket")
-
-local server = assert(socket.bind("127.0.0.1", 9999))
-
-server:settimeout(0)
-
-print("Waiting for Python connection...")
-
-local client = nil
-
-while client == nil do
-    client = server:accept()
-end
-
-print("Python connected!")
-
-client:settimeout(0)
+local input_file = "input.txt"
+local output_file = "frame.raw"
 
 while true do
 
-    local command = client:receive()
+    -- Read action from Python
+    local file = io.open(input_file, "r")
+    local action = "NONE"
 
-    if command ~= nil then
-
-        joypad.set({
-            A = false,
-            B = false,
-            Up = false,
-            Down = false,
-            Left = false,
-            Right = false
-        })
-
-        if command == "A" then
-            joypad.set({A=true})
-
-        elseif command == "B" then
-            joypad.set({B=true})
-
-        elseif command == "UP" then
-            joypad.set({Up=true})
-
-        elseif command == "DOWN" then
-            joypad.set({Down=true})
-
-        elseif command == "LEFT" then
-            joypad.set({Left=true})
-
-        elseif command == "RIGHT" then
-            joypad.set({Right=true})
-        end
+    if file then
+        action = file:read("*all")
+        file:close()
     end
 
-    local frame = gui.gdscreenshot()
+    action = string.gsub(action, "%s+", "")
 
-    client:send(frame)
+    -- Reset inputs
+    joypad.set({
+        A=false, B=false,
+        Up=false, Down=false,
+        Left=false, Right=false
+    })
 
+    -- Apply action
+    if action == "A" then joypad.set({A=true})
+    elseif action == "B" then joypad.set({B=true})
+    elseif action == "UP" then joypad.set({Up=true})
+    elseif action == "DOWN" then joypad.set({Down=true})
+    elseif action == "LEFT" then joypad.set({Left=true})
+    elseif action == "RIGHT" then joypad.set({Right=true})
+    end
+
+    -- Advance frame
     emu.frameadvance()
+
+    -- Save screenshot every frame
+    local img = gui.gdscreenshot()
+
+    local f = io.open(output_file, "wb")
+    f:write(img)
+    f:close()
 end
